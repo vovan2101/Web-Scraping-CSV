@@ -1,19 +1,69 @@
 import requests
 from bs4 import BeautifulSoup
-import lxml
 import json
+import csv
 
-headers = {
-    'user-agent' : 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Mobile Safari/537.36'
-}
 
-# for i in range(0, 96, 24):
-for i in range(0, 24, 24):
-    url = f'https://www.skiddle.com/festivals/search/?ajaxing=1&sort=0&fest_name=&from_date=9%20Nov%202022&to_date=&where%5B%5D=2&where%5B%5D=3&where%5B%5D=4&maxprice=500&o={i}&bannertitle=May'
+# url = requests.get('https://health-diet.ru/table_calorie/?utm_source=leftMenu&utm_medium=table_calorie')
+
+# soup = BeautifulSoup(url.text, 'lxml')
+# all_products_hrefs = soup.find_all(class_ = 'mzr-tc-group-item-href')
+
+
+# all_categories_dict = {}
+# for item in all_products_hrefs:
+#     item_text = item.text
+#     item_href = 'https://health-diet.ru' + item.get('href')
     
-    req = requests.get(url=url, headers=headers)
-    json_data = json.loads(req.text)
-    html_response = json_data['html']
+#     all_categories_dict[item_text] = item_href
 
-    with open(f'index_{i}.html', 'w') as file:
-        file.write(html_response)
+# with open('all_categories_dics.json', 'w', encoding='utf-8') as file:
+#     json.dump(all_categories_dict, file, indent=4, ensure_ascii=False)
+
+with open('all_categories_dics.json', encoding='utf-8') as file:
+    all_categories = json.load(file)
+
+
+for category_name, category_href in all_categories.items():
+
+    rep = [',', ' ', '-', "'"]
+    for item in rep:
+        if item in category_name:
+            category_name = category_name.replace(item, '_')
+    
+    req = requests.get(url=category_href)
+    soup = BeautifulSoup(req.text, 'lxml')
+
+    table_head = soup.find(class_ = 'uk-table mzr-tc-group-table uk-table-hover uk-table-striped uk-table-condensed').find('tr').find_all('th')
+    product = table_head[0].text
+    calories = table_head[1].text
+    proteins = table_head[2].text
+    fats = table_head[3].text
+    carbohydrates = table_head[4].text
+    
+
+    # saving product categories in csv file
+    with open(f'{category_name}.csv', 'w', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(
+            (
+              product,
+              calories,
+              proteins,
+              fats,
+              carbohydrates
+            )
+        )
+    
+    # Getting all data about products
+    products_data = soup.find(class_ = 'mzr-tc-group-table').find('tbody').find_all('tr')
+
+    for item in products_data:
+        product_tds = item.find_all('td')
+
+        title = product_tds[0].find('a').text
+        calories = product_tds[1].text
+        proteins = product_tds[2].text
+        fats = product_tds[3].text
+        carbohydrates = product_tds[4].text
+        
