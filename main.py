@@ -23,6 +23,9 @@ import csv
 with open('all_categories_dics.json', encoding='utf-8') as file:
     all_categories = json.load(file)
 
+count = 0
+iteration_count = int(len(all_categories)) - 1
+print(f'Всего итераций: {iteration_count}')
 
 for category_name, category_href in all_categories.items():
 
@@ -34,6 +37,10 @@ for category_name, category_href in all_categories.items():
     req = requests.get(url=category_href)
     soup = BeautifulSoup(req.text, 'lxml')
 
+    alert_block = soup.find(class_ = 'uk-alert-danger')
+    if alert_block is not None:
+        continue
+
     table_head = soup.find(class_ = 'uk-table mzr-tc-group-table uk-table-hover uk-table-striped uk-table-condensed').find('tr').find_all('th')
     product = table_head[0].text
     calories = table_head[1].text
@@ -43,7 +50,7 @@ for category_name, category_href in all_categories.items():
     
 
     # saving product categories in csv file
-    with open(f'{category_name}.csv', 'w', encoding='utf-8') as file:
+    with open(f'csv.files/{category_name}.csv', 'w', encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow(
             (
@@ -58,6 +65,7 @@ for category_name, category_href in all_categories.items():
     # Getting all data about products
     products_data = soup.find(class_ = 'mzr-tc-group-table').find('tbody').find_all('tr')
 
+    product_info = []
     for item in products_data:
         product_tds = item.find_all('td')
 
@@ -67,3 +75,38 @@ for category_name, category_href in all_categories.items():
         fats = product_tds[3].text
         carbohydrates = product_tds[4].text
         
+        product_info.append(
+            {
+                'title': title,
+                'calories': calories,
+                'proteins': proteins,
+                'fats': fats,
+                'carbohydrates': carbohydrates
+            }
+        )
+
+        with open(f'csv.files/{category_name}.csv', 'a', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(
+                (
+                title,
+                calories,
+                proteins,
+                fats,
+                carbohydrates
+                )
+            )
+
+
+    with open(f'json.files/{category_name}.json', 'a', encoding='utf-8') as file:
+        json.dump(product_info, file, indent=4, ensure_ascii=False)
+
+    count += 1
+    print(f'# Итерация {count}. {category_name} записан...')
+    iteration_count = iteration_count - 1
+    if iteration_count == 0:
+        print('Работа завершена!')
+        break
+
+    print(f'Осталось итераций: {iteration_count}')
+    
